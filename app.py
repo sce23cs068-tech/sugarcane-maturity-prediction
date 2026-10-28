@@ -53,22 +53,49 @@ with tab_add:
             maturity = st.selectbox("Verified maturity label (optional)", ["Not verified", "Immature", "Semi-Mature", "Mature"])
             notes = st.text_area("Notes / sample location")
         submitted = st.form_submit_button("Save reading")
-        if submitted:
-            row = {
-                "timestamp": datetime.now().isoformat(timespec="seconds"),
-                "temperature_c": temperature,
-                "humidity_percent": humidity,
-                "soil_moisture_percent": soil,
-                "brix": brix if brix > 0 else None,
-                "crop_age_days": crop_age if crop_age > 0 else None,
-                "variety": variety.strip(),
-                "maturity_label": "" if maturity == "Not verified" else maturity,
-                "notes": notes.strip()
-            }
-            updated = pd.concat([df, pd.DataFrame([row])], ignore_index=True)
-            updated.to_csv(DATA_FILE, index=False)
-            st.success("Reading saved.")
-            st.rerun()
+        
+if submitted:
+    # DEMO RULE: illustrative thresholds only, not scientifically validated
+    BRIX_THRESHOLD = 18.0
+    AGE_THRESHOLD_DAYS = 300
+
+    if brix > 0 and crop_age > 0:
+        if brix >= BRIX_THRESHOLD and crop_age >= AGE_THRESHOLD_DAYS:
+            result = "LIKELY MATURE"
+        else:
+            result = "LIKELY IMMATURE / NEEDS MORE CHECKING"
+    else:
+        result = "CANNOT ASSESS — enter Brix and crop age"
+
+    st.subheader("Sugarcane Maturity Result")
+    if result == "LIKELY MATURE":
+        st.success("🌾 " + result)
+    elif result.startswith("LIKELY IMMATURE"):
+        st.warning("🌱 " + result)
+    else:
+        st.info(result)
+
+    st.caption(
+        "Expo demonstration only. Thresholds are illustrative and "
+        "must be validated for the sugarcane variety and growing region."
+    )
+
+    row = {
+        "timestamp": datetime.now().isoformat(timespec="seconds"),
+        "temperature_c": temperature,
+        "humidity_percent": humidity,
+        "soil_moisture_percent": soil,
+        "brix": brix if brix > 0 else None,
+        "crop_age_days": crop_age if crop_age > 0 else None,
+        "variety": variety.strip(),
+        "maturity_label": result,
+        "notes": notes.strip()
+    }
+
+    updated = pd.concat([df, pd.DataFrame([row])], ignore_index=True)
+    updated.to_csv(DATA_FILE, index=False)
+    st.success("Reading saved.")
+
 
 with tab_data:
     st.subheader("Recorded dataset")
